@@ -7,6 +7,7 @@
 package com.microsoft.azure.auth;
 
 import com.microsoft.aad.adal4j.AuthenticationContext;
+import com.microsoft.aad.adal4j.AuthenticationResult;
 
 import org.apache.commons.lang3.StringUtils;
 
@@ -41,7 +42,11 @@ public class AzureCredentialCallable implements Callable<AzureCredential> {
         try {
             final AuthenticationContext authenticationContext = new AuthenticationContext(baseUrl, true,
                     executorService);
-            return AzureCredential.fromAuthenticationResult(this.acquireTokenFunc.acquire(authenticationContext));
+            final AuthenticationResult result = this.acquireTokenFunc.acquire(authenticationContext);
+            if (result == null) {
+                return null;
+            }
+            return AzureCredential.fromAuthenticationResult(result);
         } catch (Throwable e) {
             throw new AzureLoginFailureException(e.getMessage());
         } finally {

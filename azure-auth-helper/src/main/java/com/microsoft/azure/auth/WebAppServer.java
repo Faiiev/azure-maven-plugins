@@ -6,8 +6,6 @@
 
 package com.microsoft.azure.auth;
 
-import com.sun.net.httpserver.HttpExchange;
-import com.sun.net.httpserver.HttpHandler;
 import com.sun.net.httpserver.HttpServer;
 import org.apache.commons.lang3.StringUtils;
 import java.io.IOException;
@@ -67,10 +65,8 @@ public class WebAppServer {
 
     public WebAppServer() throws IOException {
         server = HttpServer.create(new InetSocketAddress(0), 0);
-        server.createContext("/", new HttpHandler() {
-
-            @Override
-            public void handle(HttpExchange httpExchange) throws IOException {
+        server.createContext("/", httpExchange -> {
+            try {
                 final Map<String, String> attributeMap = QueryStringUtil.queryToMap(httpExchange.getRequestURI().getQuery());
                 WebAppServer.this.code = attributeMap.get(CODE);
                 WebAppServer.this.error = attributeMap.get(ERROR);
@@ -78,25 +74,24 @@ public class WebAppServer {
                         : attributeMap.get("error_response");
 
                 final boolean isSuccess = StringUtils.isEmpty(error) && StringUtils.isNotEmpty(code);
-                try {
 
-                    final OutputStreamWriter osw = new OutputStreamWriter(httpExchange.getResponseBody());
-                    if (isSuccess) {
-                        httpExchange.sendResponseHeaders(200, LOGIN_SUCCESS_BODY.length());
-                        osw.write(LOGIN_SUCCESS_BODY);
-                        osw.flush();
-                    } else {
-                        final String response = String.format(LOGIN_ERROR_BODY, error, errorDescription);
-                        httpExchange.sendResponseHeaders(200, response.length());
-                        osw.write(response);
-                        osw.flush();
-                    }
-                } catch (IOException e) {
-                    e.printStackTrace();
-                } finally {
-                    server.stop(0);
-                    finish = true;
+
+                final OutputStreamWriter osw = new OutputStreamWriter(httpExchange.getResponseBody());
+                if (isSuccess) {
+                    httpExchange.sendResponseHeaders(200, LOGIN_SUCCESS_BODY.length());
+                    osw.write(LOGIN_SUCCESS_BODY);
+                    osw.flush();
+                } else {
+                    final String response = String.format(LOGIN_ERROR_BODY, error, errorDescription);
+                    httpExchange.sendResponseHeaders(200, response.length());
+                    osw.write(response);
+                    osw.flush();
                 }
+            } catch (IOException e) {
+                e.printStackTrace();
+            } finally {
+                server.stop(0);
+                finish = true;
             }
         });
         server.setExecutor(null); // creates a default executor

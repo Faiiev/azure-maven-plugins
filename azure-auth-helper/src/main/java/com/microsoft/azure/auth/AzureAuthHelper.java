@@ -30,7 +30,6 @@ import java.util.concurrent.ExecutionException;
 public class AzureAuthHelper {
     private static final String AUTH_WITH_OAUTH = "Authenticate with OAuth 2.0";
     private static final String AUTH_WITH_DEVICE_LOGIN = "Authenticate with Device Login";
-    private static final String DEVICE_LOGIN_MESSAGE_TEMPLATE = "To sign in, use a web browser to open the page %s and enter the code %s to authenticate.";
 
     /**
      * Performs an OAuth 2.0 login.
@@ -59,10 +58,7 @@ public class AzureAuthHelper {
                         env.managementEndpoint(), Constants.CLIENT_ID, redirectUri, null).get()
                 ).call();
             } finally {
-                if (webAppServer != null) {
-                    webAppServer.stop();
-                }
-
+                webAppServer.stop();
             }
 
         } catch (IOException | URISyntaxException e) {
@@ -92,14 +88,19 @@ public class AzureAuthHelper {
                 // see
                 // https://github.com/AzureAD/azure-activedirectory-library-for-java/issues/246
                 logger = LoggerFactory.getLogger(AuthenticationContext.class);
-                levelField = logger.getClass().getSuperclass().getDeclaredField("currentLogLevel");
-                oldLevelValue = setObjectValue(logger, levelField, LocationAwareLogger.ERROR_INT + 1);
+                if (logger != null) {
+                    levelField = logger.getClass().getSuperclass().getDeclaredField("currentLogLevel");
+                    oldLevelValue = changeFieldValue(logger, levelField, LocationAwareLogger.ERROR_INT + 1);
+                }
             } catch (Exception e) {
                 System.out.println("Failed to disable the log of " + AuthenticationContext.class.getName() + ", it will continue being noisy.");
             }
             return new AzureCredentialCallable(baseURL(env), authenticationContext -> {
                 final DeviceCode deviceCode = authenticationContext.acquireDeviceCode(Constants.CLIENT_ID, env.activeDirectoryResourceId(), null).get();
-                System.out.println(String.format(DEVICE_LOGIN_MESSAGE_TEMPLATE, deviceCode.getVerificationUrl(), deviceCode.getUserCode()));
+                // print device code hint message:
+                // to sign in, use a web browser to open the page https://microsoft.com/devicelogin and enter the code xxxxxx to authenticate.
+                // TODO: add a color wrap
+                System.err.println(deviceCode.getMessage());
                 long remaining = deviceCode.getExpiresIn();
                 final long interval = deviceCode.getInterval();
                 AuthenticationResult result = null;
@@ -119,12 +120,15 @@ public class AzureAuthHelper {
                         }
                     }
                 }
+                if (result == null) {
+                    throw new AzureLoginFailureException("Cannot preceed with device login after waiting for " + deviceCode.getExpiresIn() / 60 + " minutes.");
+                }
                 return result;
             }).call();
         } finally {
             try {
                 // reset currentLogLevel to the logger in AuthenticationContext
-                setObjectValue(logger, levelField, oldLevelValue);
+                changeFieldValue(logger, levelField, oldLevelValue);
             } catch (IllegalArgumentException | IllegalAccessException e) {
                 // ignore
                 System.out.println("Failed to reset the log level of " + AuthenticationContext.class.getName());
@@ -202,7 +206,7 @@ public class AzureAuthHelper {
         return env.activeDirectoryEndpoint() + Constants.COMMON_TENANT;
     }
 
-    private static Object setObjectValue(Object obj, Field field, Object value)
+    private static Object changeFieldValue(Object obj, Field field, Object value)
             throws IllegalArgumentException, IllegalAccessException {
         if (field == null) {
             return null;
