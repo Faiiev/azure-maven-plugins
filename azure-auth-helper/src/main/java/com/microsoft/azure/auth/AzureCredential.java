@@ -34,6 +34,7 @@ public class AzureCredential {
         token.setRefreshToken(result.getRefreshToken());
         token.setIdToken(result.getIdToken());
         token.setUserInfo(result.getUserInfo());
+        token.setMultipleResourceRefreshToken(result.isMultipleResourceRefreshToken());
         return token;
     }
 
