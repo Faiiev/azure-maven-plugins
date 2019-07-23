@@ -13,6 +13,7 @@ import com.microsoft.aad.adal4j.AuthenticationResult;
 import com.microsoft.aad.adal4j.DeviceCode;
 import com.microsoft.azure.AzureEnvironment;
 
+import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.reflect.FieldUtils;
 import org.apache.http.client.utils.URIBuilder;
@@ -47,20 +48,20 @@ public class AzureAuthHelper {
             return null;
         }
         try {
-            final LocalAuthServer webAppServer = new LocalAuthServer();
-            final String redirectUrl = webAppServer.getUrl();
+            final LocalAuthServer localAuthServer = new LocalAuthServer();
+            final String redirectUrl = localAuthServer.getUrl();
             final URI redirectUri = new URI(redirectUrl);
             try {
                 final String authorizationUrl = authorizationUrl(env, redirectUrl);
                 Desktop.getDesktop().browse(new URL(authorizationUrl).toURI());
                 System.out.println(AUTH_WITH_OAUTH);
 
-                webAppServer.start();
-                return new AzureContextExecutor(baseURL(env), context -> context.acquireTokenByAuthorizationCode(webAppServer.getResult(),
+                localAuthServer.start();
+                return new AzureContextExecutor(baseURL(env), context -> context.acquireTokenByAuthorizationCode(localAuthServer.getResult(),
                         env.managementEndpoint(), Constants.CLIENT_ID, redirectUri, null).get()
                 ).execute();
             } finally {
-                webAppServer.stop();
+                localAuthServer.stop();
             }
 
         } catch (IOException | URISyntaxException e) {
@@ -187,9 +188,30 @@ public class AzureAuthHelper {
      */
     public static File getAzureSecretFile() {
         return (StringUtils.isBlank(System.getProperty(Constants.AZURE_HOME_KEY)) ?
-                Paths.get(System.getProperty(Constants.USER_HOME_KEY), Constants.AZURE_HOME_DEFAULT, Constants.AZURE_SECRET_FILE)
-                : Paths.get(System.getProperty(Constants.AZURE_HOME_KEY), Constants.AZURE_SECRET_FILE)).toFile();
+              Paths.get(System.getProperty(Constants.USER_HOME_KEY), Constants.AZURE_HOME_DEFAULT, Constants.AZURE_SECRET_FILE)
+              : Paths.get(System.getProperty(Constants.AZURE_HOME_KEY), Constants.AZURE_SECRET_FILE)).toFile();
     }
+
+    /**
+     * Check whether the azure-secret.json file exists and is not empty.
+     */
+    public static boolean existsAzureSecretFile() {
+        final File azureSecretFile = AzureAuthHelper.getAzureSecretFile();
+        return azureSecretFile.exists() && azureSecretFile.isFile() && azureSecretFile.length() > 0;
+    }
+
+    /**
+     * Delete the azure-secret.json.
+     *
+     * @return true if the file is deleted.
+     */
+    public static boolean deleteAzureSecretFile() {
+        if (existsAzureSecretFile()) {
+            return FileUtils.deleteQuietly(AzureAuthHelper.getAzureSecretFile());
+        }
+        return false;
+    }
+
 
     /***
      * Save the credential to a file.
@@ -199,7 +221,13 @@ public class AzureAuthHelper {
      * @throws IOException if there is any IO error.
      */
     public static void writeAzureCredentials(AzureCredential cred, File file) throws IOException {
-        throw new UnsupportedOperationException("Not implemented");
+        if (cred == null) {
+            throw new IllegalArgumentException("Parameter 'cred' cannot be null.");
+        }
+        if (file == null) {
+            throw new IllegalArgumentException("Parameter 'file' cannot be null.");
+        }
+        FileUtils.writeStringToFile(file, JsonUtils.toJson(cred), "utf8");
     }
 
     /***
@@ -210,7 +238,11 @@ public class AzureAuthHelper {
      * @throws IOException if there is any IO error.
      */
     public static AzureCredential readAzureCredentials(File file) throws IOException {
-        throw new UnsupportedOperationException("Not implemented");
+        if (file == null) {
+            throw new IllegalArgumentException("Parameter 'file' cannot be null.");
+        }
+        final String jsonStr = FileUtils.readFileToString(file, "utf8");
+        return JsonUtils.fromJson(jsonStr, AzureCredential.class);
     }
 
     static String authorizationUrl(AzureEnvironment env, String redirectUrl) throws URISyntaxException, MalformedURLException {

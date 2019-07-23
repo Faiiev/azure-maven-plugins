@@ -6,6 +6,7 @@
 
 package com.microsoft.azure.auth;
 
+import com.microsoft.aad.adal4j.AuthenticationResult;
 import com.microsoft.azure.AzureEnvironment;
 
 import org.junit.Test;
@@ -56,6 +57,22 @@ public class AzureAuthHelperTest {
     }
 
     @Test
+    public void testGetAzureEnvironment() {
+        assertEquals(AzureEnvironment.AZURE, AzureAuthHelper.getAzureEnvironment(null));
+        assertEquals(AzureEnvironment.AZURE, AzureAuthHelper.getAzureEnvironment(""));
+        assertEquals(AzureEnvironment.AZURE, AzureAuthHelper.getAzureEnvironment("invalid key"));
+
+        assertEquals(AzureEnvironment.AZURE_CHINA, AzureAuthHelper.getAzureEnvironment("AZURE_CHINA"));
+        assertEquals(AzureEnvironment.AZURE_CHINA, AzureAuthHelper.getAzureEnvironment("azure_china"));
+
+        assertEquals(AzureEnvironment.AZURE_GERMANY, AzureAuthHelper.getAzureEnvironment("AZURE_GERMANY"));
+        assertEquals(AzureEnvironment.AZURE_GERMANY, AzureAuthHelper.getAzureEnvironment("azure_germany"));
+
+        assertEquals(AzureEnvironment.AZURE_US_GOVERNMENT, AzureAuthHelper.getAzureEnvironment("AZURE_US_GOVERNMENT"));
+        assertEquals(AzureEnvironment.AZURE_US_GOVERNMENT, AzureAuthHelper.getAzureEnvironment("azure_us_government"));
+    }
+
+    @Test
     public void tetGetAzureSecretFile() throws Exception {
         File azureSecretFile = AzureAuthHelper.getAzureSecretFile();
         assertEquals(Paths.get(System.getProperty(Constants.USER_HOME_KEY), ".azure", "azure-secret.json").toString(),
@@ -67,11 +84,48 @@ public class AzureAuthHelperTest {
     }
 
     @Test
-    public void testWriteAzureCredentials() throws Exception {
-    }
+    public void testReadWriteAzureCredentials() throws Exception {
+        final File tempFile = File.createTempFile("azure-auth-helper", "unit-test");
+        tempFile.deleteOnExit();
+        final String authJson = "{\n" +
+                "    \"accessTokenType\": \"Bearer\",\n" +
+                "    \"idToken\": \"eyJ0eXAi...iOiIxLjAifQ.\",\n" +
+                "    \"userInfo\": {\n" +
+                "        \"uniqueId\": \"daaaa...3f2\",\n" +
+                "        \"displayableId\": \"george@microsoft.com\",\n" +
+                "        \"givenName\": \"George\",\n" +
+                "        \"familyName\": \"Smith\",\n" +
+                "        \"tenantId\": \"72f988bf-86f1-41af-91ab-2d7cd011db47\"\n" +
+                "    },\n" +
+                "    \"accessToken\": \"eyJ0eXA...jmcnxMnQ\",\n" +
+                "    \"refreshToken\": \"AQAB...n5cgAA\",\n" +
+                "    \"isMultipleResourceRefreshToken\": true\n" +
+                "}";
+        final AuthenticationResult result = JsonUtils.fromJson(authJson, AuthenticationResult.class);
+        final AzureCredential cred = AzureCredential.fromAuthenticationResult(result);
+        AzureAuthHelper.writeAzureCredentials(cred, tempFile);
+        AzureCredential credentialFromFile = AzureAuthHelper.readAzureCredentials(tempFile);
 
-    @Test
-    public void testReadAzureCredentials() throws Exception {
+        assertEquals(cred.isMultipleResourceRefreshToken(), credentialFromFile.isMultipleResourceRefreshToken());
+        assertEquals(cred.getAccessTokenType(), credentialFromFile.getAccessTokenType());
+        assertEquals(cred.getAccessToken(), credentialFromFile.getAccessToken());
+        assertEquals(cred.getRefreshToken(), credentialFromFile.getRefreshToken());
+        assertEquals(cred.getIdToken(), credentialFromFile.getIdToken());
+        assertEquals(cred.getUserInfo().getFamilyName(), credentialFromFile.getUserInfo().getFamilyName());
+
+        // second read should not throw exception
+        credentialFromFile = AzureAuthHelper.readAzureCredentials(tempFile);
+        final Map<String, Object> map = JsonUtils.fromJson(authJson, Map.class);
+        assertEquals(map.get("accessTokenType"), credentialFromFile.getAccessTokenType());
+        assertEquals(map.get("accessToken"), credentialFromFile.getAccessToken());
+        assertEquals(map.get("refreshToken"), credentialFromFile.getRefreshToken());
+        assertEquals(map.get("idToken"), credentialFromFile.getIdToken());
+        assertEquals(map.get("isMultipleResourceRefreshToken"), credentialFromFile.isMultipleResourceRefreshToken());
+
+        assertEquals("daaaa...3f2", credentialFromFile.getUserInfo().getUniqueId());
+        assertEquals("george@microsoft.com", credentialFromFile.getUserInfo().getDisplayableId());
+        assertEquals("George", credentialFromFile.getUserInfo().getGivenName());
+        assertEquals("Smith", credentialFromFile.getUserInfo().getFamilyName());
     }
 
     @Test
