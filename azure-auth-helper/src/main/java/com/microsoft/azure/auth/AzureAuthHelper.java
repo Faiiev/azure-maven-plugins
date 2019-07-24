@@ -47,21 +47,24 @@ public class AzureAuthHelper {
         if (!Desktop.isDesktopSupported() || !Desktop.getDesktop().isSupported(Desktop.Action.BROWSE)) {
             return null;
         }
+
+        final LocalAuthServer server = new LocalAuthServer();
         try {
-            final LocalAuthServer localAuthServer = new LocalAuthServer();
-            final String redirectUrl = localAuthServer.getUrl();
-            final URI redirectUri = new URI(redirectUrl);
+            server.start();
+            final URI redirectUri = server.getURI();
+            final String redirectUrl = redirectUri.toString();
+
             try {
                 final String authorizationUrl = authorizationUrl(env, redirectUrl);
                 Desktop.getDesktop().browse(new URL(authorizationUrl).toURI());
                 System.out.println(AUTH_WITH_OAUTH);
-
-                localAuthServer.start();
-                return new AzureContextExecutor(baseURL(env), context -> context.acquireTokenByAuthorizationCode(localAuthServer.getResult(),
-                        env.managementEndpoint(), Constants.CLIENT_ID, redirectUri, null).get()
-                ).execute();
+                final String code = server.waitForCode();
+                return new AzureContextExecutor(baseURL(env), context -> context.acquireTokenByAuthorizationCode(code,
+                        env.managementEndpoint(), Constants.CLIENT_ID, redirectUri, null).get()).execute();
+            } catch (InterruptedException e) {
+                throw new AzureLoginFailureException("The OAuth flow is interrupted.");
             } finally {
-                localAuthServer.stop();
+                server.stop();
             }
 
         } catch (IOException | URISyntaxException e) {
@@ -101,7 +104,8 @@ public class AzureAuthHelper {
             return new AzureContextExecutor(baseURL(env), authenticationContext -> {
                 final DeviceCode deviceCode = authenticationContext.acquireDeviceCode(Constants.CLIENT_ID, env.activeDirectoryResourceId(), null).get();
                 // print device code hint message:
-                // to sign in, use a web browser to open the page https://microsoft.com/devicelogin and enter the code xxxxxx to authenticate.
+                // to sign in, use a web browser to open the page
+                // https://microsoft.com/devicelogin and enter the code xxxxxx to authenticate.
                 // TODO: add a color wrap
                 System.err.println(deviceCode.getMessage());
                 long remaining = deviceCode.getExpiresIn();
