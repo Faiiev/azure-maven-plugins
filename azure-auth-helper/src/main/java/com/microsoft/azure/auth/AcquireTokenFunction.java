@@ -13,5 +13,5 @@ import java.util.concurrent.ExecutionException;
 
 @FunctionalInterface
 public interface AcquireTokenFunction {
-    AuthenticationResult acquire(AuthenticationContext context) throws AzureLoginFailureException, InterruptedException, ExecutionException;
+    AuthenticationResult acquire(AuthenticationContext context) throws AzureLoginTimeoutException, InterruptedException, ExecutionException;
 }

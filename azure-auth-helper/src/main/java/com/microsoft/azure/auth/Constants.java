@@ -27,6 +27,8 @@ public class Constants {
     public static final String CONTENT_TYPE_TEXT_HTML = "text/html";
     public static final Charset UTF8 = Charset.forName("UTF-8");
 
+    public static final String CLOUD_SHELL_ENV_KEY = "ACC_CLOUD";
+
     private Constants() {
 
     }

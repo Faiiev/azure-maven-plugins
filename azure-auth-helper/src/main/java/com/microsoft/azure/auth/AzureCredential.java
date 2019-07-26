@@ -17,6 +17,8 @@ public class AzureCredential {
     private String accessToken;
     private String refreshToken;
     private boolean isMultipleResourceRefreshToken;
+    private String defaultSubscription;
+    private String environment;
 
     /***
      * Create an AzureCredential with {@link com.microsoft.aad.adal4j.AuthenticationResult}.
@@ -88,5 +90,33 @@ public class AzureCredential {
 
     private AzureCredential() {
 
+    }
+
+    /**
+     * @return the defaultSubscription
+     */
+    public String getDefaultSubscription() {
+        return defaultSubscription;
+    }
+
+    /**
+     * @param defaultSubscription the defaultSubscription to set
+     */
+    public void setDefaultSubscription(String defaultSubscription) {
+        this.defaultSubscription = defaultSubscription;
+    }
+
+    /**
+     * @return the environment
+     */
+    public String getEnvironment() {
+        return environment;
+    }
+
+    /**
+     * @param environment the environment to set
+     */
+    public void setEnvironment(String environment) {
+        this.environment = environment;
     }
 }

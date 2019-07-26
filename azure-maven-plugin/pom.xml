@@ -11,9 +11,9 @@
     <version>0.1.0-SNAPSHOT</version>
     <name>Azure Plugin</name>
     <packaging>maven-plugin</packaging>
-    <description>Azure Authentication library for java</description>
+    <description>Azure library</description>
     <url>https://github.com/microsoft/azure-maven-plugins</url>
-    
+
     <prerequisites>
         <maven>${maven.version}</maven>
     </prerequisites>
@@ -23,7 +23,7 @@
         <maven.version>3.5</maven.version>
         <junit.version>4.12</junit.version>
     </properties>
-    
+
     <licenses>
         <license>
             <name>MIT License</name>
@@ -31,14 +31,14 @@
             <distribution>repo</distribution>
         </license>
     </licenses>
-    
+
     <scm>
         <connection>scm:git:https://github.com/microsoft/azure-maven-plugins</connection>
         <developerConnection>scm:git:git@github.com:microsoft/azure-maven-plugins</developerConnection>
         <url>https://github.com/microsoft/azure-maven-plugins</url>
         <tag>HEAD</tag>
     </scm>
-    
+
     <developers>
         <developer>
             <id>xscript</id>
@@ -46,7 +46,7 @@
             <email>andxu@microsoft.com</email>
         </developer>
     </developers>
-    
+
     <profiles>
         <profile>
             <id>doclint-java8-disable</id>
@@ -58,7 +58,7 @@
             </properties>
         </profile>
     </profiles>
-    
+
     <dependencies>
         <dependency>
             <groupId>com.microsoft.azure</groupId>
@@ -70,7 +70,7 @@
             <artifactId>maven-plugin-api</artifactId>
             <version>3.5.0</version>
         </dependency>
-        
+
         <!-- dependencies to annotations -->
         <dependency>
             <groupId>org.apache.maven.plugin-tools</groupId>
@@ -92,7 +92,7 @@
             <scope>test</scope>
         </dependency>
     </dependencies>
-    
+
     <build>
         <plugins>
             <plugin>

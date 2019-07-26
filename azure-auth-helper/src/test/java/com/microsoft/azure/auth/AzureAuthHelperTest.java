@@ -20,6 +20,7 @@ import java.nio.file.Paths;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ExecutionException;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
@@ -38,9 +39,10 @@ public class AzureAuthHelperTest {
     public void testRefreshTokenInvalidToken() throws Exception {
         try {
             AzureAuthHelper.refreshToken(AzureEnvironment.AZURE, "invalid");
-            fail("Should throw AzureLoginFailureException when refreshToken is invalid.");
-        } catch (AzureLoginFailureException e) {
+            fail("Should throw ExecutionException when refreshToken is invalid.");
+        } catch (ExecutionException e) {
             // ignore
+            System.out.println(e.getCause().getClass().getName());
         }
     }
 

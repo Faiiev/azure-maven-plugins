@@ -33,7 +33,7 @@ public class AzureContextExecutor {
         this.acquireTokenFunc = acquireTokenFunc;
     }
 
-    public AzureCredential execute() throws AzureLoginFailureException {
+    public AzureCredential execute() throws MalformedURLException, InterruptedException, ExecutionException, AzureLoginTimeoutException {
         final ExecutorService executorService = Executors.newSingleThreadExecutor();
         try {
             final AuthenticationContext authenticationContext = new AuthenticationContext(baseUrl, true,
@@ -43,8 +43,6 @@ public class AzureContextExecutor {
                 return null;
             }
             return AzureCredential.fromAuthenticationResult(result);
-        } catch (MalformedURLException | InterruptedException | ExecutionException e) {
-            throw new AzureLoginFailureException(e.getMessage());
         } finally {
             executorService.shutdown();
         }
